@@ -1,0 +1,25 @@
+start-dfs.sh
+start-yarn.sh
+start-hbase.sh
+hbase thrift start -c -nonblocking (change the hbase framed size to 20mb)
+kafka-server-start.sh $KAFKA_CONFIG/server.properties
+
+kafka-topics.sh --list --zookeeper localhost:2181
+
+kafka-topics.sh --zookeeper localhost:2181 --delete --topic frontier-done
+kafka-topics.sh --zookeeper localhost:2181 --delete --topic frontier-score
+kafka-topics.sh --zookeeper localhost:2181 --delete --topic frontier-stats
+kafka-topics.sh --zookeeper localhost:2181 --delete --topic frontier-todo
+
+kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic frontier-done
+kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic frontier-score
+kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic frontier-todo
+
+python -m frontera.worker.db --config tutorial.config.dbw --no-incoming --partitions 0
+
+python -m frontera.worker.db --config tutorial.config.dbw --no-batches --no-scoring --partitions 0 (store content)
+
+python -m frontera.worker.strategy --config tutorial.config.sw --partition-id 0
+
+python -m frontera.utils.add_seeds --config tutorial.config.sw --seeds-file seeds.txt
+scrapy crawl tutorial -L INFO -s SPIDER_PARTITION_ID=0
